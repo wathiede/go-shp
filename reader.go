@@ -2,6 +2,8 @@ package shp
 
 import (
 	"encoding/binary"
+	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -20,13 +22,38 @@ type Reader struct {
 	shape      Shape
 	num        int32
 	filename   string
-	filelength int64
+	filelength int32
 
 	dbf             *os.File
 	dbfFields       []Field
 	dbfNumRecords   int32
 	dbfHeaderLength int16
 	dbfRecordLength int16
+
+	errReader
+}
+
+type errReader struct {
+	err error
+}
+
+func (er *errReader) littleRead(r io.Reader, data interface{}) {
+	if er.err != nil {
+		return
+	}
+	er.err = binary.Read(r, binary.LittleEndian, data)
+}
+
+func (er *errReader) bigRead(r io.Reader, data interface{}) {
+	if er.err != nil {
+		return
+	}
+	er.err = binary.Read(r, binary.BigEndian, data)
+}
+
+// Err returns the first non-EOF error that was encountered by the Reader.
+func (r *Reader) Err() error {
+	return r.err
 }
 
 // Open opens a Shapefile for reading.
@@ -38,7 +65,7 @@ func Open(filename string) (*Reader, error) {
 	}
 	s := &Reader{filename: filename, shp: shp}
 	s.readHeaders()
-	return s, nil
+	return s, s.Err()
 }
 
 func (r *Reader) BBox() Box {
@@ -48,26 +75,39 @@ func (r *Reader) BBox() Box {
 // Read and parse headers in the Shapefile. This will
 // fill out GeometryType, filelength and bbox.
 func (r *Reader) readHeaders() {
-	// don't trust the the filelength in the header
-	r.filelength, _ = r.shp.Seek(0, os.SEEK_END)
+	var filecode int32
+	r.bigRead(r.shp, &filecode)
+	if r.err != nil {
+		return
+	}
+	if filecode != 9994 {
+		r.err = fmt.Errorf("invalid file code %d", filecode)
+		return
+	}
 
-	var filelength int32
 	r.shp.Seek(24, 0)
 	// file length
-	binary.Read(r.shp, binary.BigEndian, &filelength)
-	r.shp.Seek(32, 0)
-	binary.Read(r.shp, binary.LittleEndian, &r.GeometryType)
-	r.bbox.MinX = r.readFloat64()
-	r.bbox.MinY = r.readFloat64()
-	r.bbox.MaxX = r.readFloat64()
-	r.bbox.MaxY = r.readFloat64()
-	r.shp.Seek(100, 0)
-}
+	r.bigRead(r.shp, &r.filelength)
+	// File length header is the number of 16-bit words, store byte counts.
+	r.filelength *= 2
 
-func (r *Reader) readFloat64() float64 {
-	var bits uint64
-	binary.Read(r.shp, binary.LittleEndian, &bits)
-	return math.Float64frombits(bits)
+	var ver int32
+	r.littleRead(r.shp, &ver)
+	if r.err != nil {
+		return
+	}
+	if ver != 1000 {
+		r.err = fmt.Errorf("invalid file version %d", ver)
+		return
+	}
+
+	r.shp.Seek(32, 0)
+	r.littleRead(r.shp, &r.GeometryType)
+	r.littleRead(r.shp, &r.bbox.MinX)
+	r.littleRead(r.shp, &r.bbox.MinY)
+	r.littleRead(r.shp, &r.bbox.MaxX)
+	r.littleRead(r.shp, &r.bbox.MaxY)
+	r.shp.Seek(100, 0)
 }
 
 // Close closes the Shapefile.
@@ -86,21 +126,25 @@ func (r *Reader) Shape() (int, Shape) {
 	return int(r.num) - 1, r.shape
 }
 
-// Next reads in the next Shape in the Shapefile, which
-// will then be available through the Shape method. It
-// returns false when the reader has reached the end of the
-// file.
+// Next reads in the next Shape in the Shapefile, which will then be available
+// through the Shape method. It returns false when the reader has reached the
+// end of the file.  After Next returns false, the Err method will return any
+// error that occurred during scanning, except that if it was io.EOF, Err will
+// return nil.
 func (r *Reader) Next() bool {
 	cur, _ := r.shp.Seek(0, os.SEEK_CUR)
-	if cur >= r.filelength {
+	if cur >= int64(r.filelength) {
 		return false
 	}
 
 	var size int32
 	var shapetype ShapeType
-	binary.Read(r.shp, binary.BigEndian, &r.num)
-	binary.Read(r.shp, binary.BigEndian, &size)
-	binary.Read(r.shp, binary.LittleEndian, &shapetype)
+	r.bigRead(r.shp, &r.num)
+	r.bigRead(r.shp, &size)
+	r.littleRead(r.shp, &shapetype)
+	if r.err != nil {
+		return false
+	}
 
 	switch shapetype {
 	case NULL:
@@ -135,6 +179,9 @@ func (r *Reader) Next() bool {
 		log.Fatal("Unsupported shape type:", shapetype)
 	}
 	r.shape.read(r.shp)
+	if r.Err() != nil {
+		return false
+	}
 
 	// move to next object
 	r.shp.Seek(int64(size)*2+cur+8, 0)
@@ -156,14 +203,14 @@ func (r *Reader) openDbf() (err error) {
 
 	// read header
 	r.dbf.Seek(4, os.SEEK_SET)
-	binary.Read(r.dbf, binary.LittleEndian, &r.dbfNumRecords)
-	binary.Read(r.dbf, binary.LittleEndian, &r.dbfHeaderLength)
-	binary.Read(r.dbf, binary.LittleEndian, &r.dbfRecordLength)
+	r.littleRead(r.dbf, &r.dbfNumRecords)
+	r.littleRead(r.dbf, &r.dbfHeaderLength)
+	r.littleRead(r.dbf, &r.dbfRecordLength)
 
 	r.dbf.Seek(20, os.SEEK_CUR) // skip padding
 	numFields := int(math.Floor(float64(r.dbfHeaderLength-33) / 32.0))
 	r.dbfFields = make([]Field, numFields)
-	binary.Read(r.dbf, binary.LittleEndian, &r.dbfFields)
+	r.littleRead(r.dbf, &r.dbfFields)
 
 	return
 }

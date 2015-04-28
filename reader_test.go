@@ -2,16 +2,17 @@ package shp
 
 import "testing"
 
-func pointsEqual(a, b []float64) bool {
+func pointsEqual(t *testing.T, a, b []float64) {
 	if len(a) != len(b) {
-		return false
+		t.Errorf("Points did not match, %v != %v", a, b)
+		return
 	}
 	for k, v := range a {
 		if v != b[k] {
-			return false
+			t.Errorf("Points did not match, %v != %v", a, b)
+			return
 		}
 	}
-	return true
 }
 
 func getShapes(filename string, t *testing.T) (shapes []Shape) {
@@ -25,7 +26,9 @@ func getShapes(filename string, t *testing.T) (shapes []Shape) {
 		_, shape := file.Shape()
 		shapes = append(shapes, shape)
 	}
-
+	if err := file.Err(); err != nil {
+		t.Fatal(err)
+	}
 	return shapes
 }
 
@@ -39,9 +42,7 @@ func test_Point(t *testing.T, filename string, points [][]float64, shapes_num in
 		if !ok {
 			t.Fatal("Failed to type assert.")
 		}
-		if !pointsEqual([]float64{p.X, p.Y}, points[n]) {
-			t.Error("Points did not match.")
-		}
+		pointsEqual(t, []float64{p.X, p.Y}, points[n])
 	}
 }
 
@@ -56,9 +57,7 @@ func test_PolyLine(t *testing.T, filename string, points [][]float64, shapes_num
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y})
 		}
 	}
 }
@@ -74,9 +73,7 @@ func test_Polygon(t *testing.T, filename string, points [][]float64, shapes_num 
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y})
 		}
 	}
 }
@@ -92,9 +89,7 @@ func test_MultiPoint(t *testing.T, filename string, points [][]float64, shapes_n
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y})
 		}
 	}
 }
@@ -109,9 +104,7 @@ func test_PointZ(t *testing.T, filename string, points [][]float64, shapes_num i
 		if !ok {
 			t.Fatal("Failed to type assert.")
 		}
-		if !pointsEqual([]float64{p.X, p.Y, p.Z}, points[n]) {
-			t.Error("Points did not match.")
-		}
+		pointsEqual(t, []float64{p.X, p.Y, p.Z}, points[n])
 	}
 }
 
@@ -126,9 +119,7 @@ func test_PolyLineZ(t *testing.T, filename string, points [][]float64, shapes_nu
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y, p.ZArray[k]}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y, p.ZArray[k]})
 		}
 	}
 }
@@ -144,9 +135,7 @@ func test_PolygonZ(t *testing.T, filename string, points [][]float64, shapes_num
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y, p.ZArray[k]}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y, p.ZArray[k]})
 		}
 	}
 }
@@ -162,9 +151,7 @@ func test_MultiPointZ(t *testing.T, filename string, points [][]float64, shapes_
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y, p.ZArray[k]}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y, p.ZArray[k]})
 		}
 	}
 }
@@ -179,9 +166,7 @@ func test_PointM(t *testing.T, filename string, points [][]float64, shapes_num i
 		if !ok {
 			t.Fatal("Failed to type assert.")
 		}
-		if !pointsEqual([]float64{p.X, p.Y, p.M}, points[n]) {
-			t.Error("Points did not match.")
-		}
+		pointsEqual(t, []float64{p.X, p.Y, p.M}, points[n])
 	}
 }
 
@@ -196,9 +181,7 @@ func test_PolyLineM(t *testing.T, filename string, points [][]float64, shapes_nu
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y, p.MArray[k]}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y, p.MArray[k]})
 		}
 	}
 }
@@ -214,9 +197,7 @@ func test_PolygonM(t *testing.T, filename string, points [][]float64, shapes_num
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y, p.MArray[k]}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y, p.MArray[k]})
 		}
 	}
 }
@@ -232,9 +213,7 @@ func test_MultiPointM(t *testing.T, filename string, points [][]float64, shapes_
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y, p.MArray[k]}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y, p.MArray[k]})
 		}
 	}
 }
@@ -250,9 +229,7 @@ func test_MultiPatch(t *testing.T, filename string, points [][]float64, shapes_n
 			t.Fatal("Failed to type assert.")
 		}
 		for k, point := range p.Points {
-			if !pointsEqual(points[n*3+k], []float64{point.X, point.Y, p.ZArray[k]}) {
-				t.Error("Points did not match.")
-			}
+			pointsEqual(t, points[n*3+k], []float64{point.X, point.Y, p.ZArray[k]})
 		}
 	}
 }

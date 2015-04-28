@@ -144,6 +144,8 @@ type PolyLine struct {
 	NumPoints int32
 	Parts     []int32
 	Points    []Point
+
+	errReader
 }
 
 // NewPolyLine returns a pointer a new PolyLine created
@@ -168,13 +170,16 @@ func (p PolyLine) BBox() Box {
 }
 
 func (p *PolyLine) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumParts)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumParts)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Parts = make([]int32, p.NumParts)
 	p.Points = make([]Point, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Parts)
-	binary.Read(file, binary.LittleEndian, &p.Points)
+	p.littleRead(file, &p.Parts)
+	p.littleRead(file, &p.Points)
 }
 
 func (p *PolyLine) write(file io.Writer) {
@@ -195,13 +200,16 @@ func (p Polygon) BBox() Box {
 }
 
 func (p *Polygon) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumParts)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumParts)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Parts = make([]int32, p.NumParts)
 	p.Points = make([]Point, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Parts)
-	binary.Read(file, binary.LittleEndian, &p.Points)
+	p.littleRead(file, &p.Parts)
+	p.littleRead(file, &p.Points)
 }
 
 func (p *Polygon) write(file io.Writer) {
@@ -217,6 +225,8 @@ type MultiPoint struct {
 	Box       Box
 	NumPoints int32
 	Points    []Point
+
+	errReader
 }
 
 // Returns the bounding box of the MultiPoint feature
@@ -225,10 +235,13 @@ func (p MultiPoint) BBox() Box {
 }
 
 func (p *MultiPoint) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Points = make([]Point, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Points)
+	p.littleRead(file, &p.Points)
 }
 
 func (p *MultiPoint) write(file io.Writer) {
@@ -243,6 +256,8 @@ type PointZ struct {
 	Y float64
 	Z float64
 	M float64
+
+	errReader
 }
 
 // Returns the bounding box of the PointZ feature
@@ -251,7 +266,10 @@ func (p PointZ) BBox() Box {
 }
 
 func (p *PointZ) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, p)
+	p.littleRead(file, &p.X)
+	p.littleRead(file, &p.Y)
+	p.littleRead(file, &p.Z)
+	p.littleRead(file, &p.M)
 }
 
 func (p *PointZ) write(file io.Writer) {
@@ -269,6 +287,8 @@ type PolyLineZ struct {
 	ZArray    []float64
 	MRange    [2]float64
 	MArray    []float64
+
+	errReader
 }
 
 // Returns the bounding box of the PolyLineZ feature
@@ -277,19 +297,22 @@ func (p PolyLineZ) BBox() Box {
 }
 
 func (p *PolyLineZ) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumParts)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumParts)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Parts = make([]int32, p.NumParts)
 	p.Points = make([]Point, p.NumPoints)
 	p.ZArray = make([]float64, p.NumPoints)
 	p.MArray = make([]float64, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Parts)
-	binary.Read(file, binary.LittleEndian, &p.Points)
-	binary.Read(file, binary.LittleEndian, &p.ZRange)
-	binary.Read(file, binary.LittleEndian, &p.ZArray)
-	binary.Read(file, binary.LittleEndian, &p.MRange)
-	binary.Read(file, binary.LittleEndian, &p.MArray)
+	p.littleRead(file, &p.Parts)
+	p.littleRead(file, &p.Points)
+	p.littleRead(file, &p.ZRange)
+	p.littleRead(file, &p.ZArray)
+	p.littleRead(file, &p.MRange)
+	p.littleRead(file, &p.MArray)
 }
 
 func (p *PolyLineZ) write(file io.Writer) {
@@ -314,19 +337,22 @@ func (p PolygonZ) BBox() Box {
 }
 
 func (p *PolygonZ) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumParts)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumParts)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Parts = make([]int32, p.NumParts)
 	p.Points = make([]Point, p.NumPoints)
 	p.ZArray = make([]float64, p.NumPoints)
 	p.MArray = make([]float64, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Parts)
-	binary.Read(file, binary.LittleEndian, &p.Points)
-	binary.Read(file, binary.LittleEndian, &p.ZRange)
-	binary.Read(file, binary.LittleEndian, &p.ZArray)
-	binary.Read(file, binary.LittleEndian, &p.MRange)
-	binary.Read(file, binary.LittleEndian, &p.MArray)
+	p.littleRead(file, &p.Parts)
+	p.littleRead(file, &p.Points)
+	p.littleRead(file, &p.ZRange)
+	p.littleRead(file, &p.ZArray)
+	p.littleRead(file, &p.MRange)
+	p.littleRead(file, &p.MArray)
 }
 
 func (p *PolygonZ) write(file io.Writer) {
@@ -350,6 +376,8 @@ type MultiPointZ struct {
 	ZArray    []float64
 	MRange    [2]float64
 	MArray    []float64
+
+	errReader
 }
 
 // Returns the bounding box of the MultiPointZ feature
@@ -358,16 +386,19 @@ func (p MultiPointZ) BBox() Box {
 }
 
 func (p *MultiPointZ) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Points = make([]Point, p.NumPoints)
 	p.ZArray = make([]float64, p.NumPoints)
 	p.MArray = make([]float64, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Points)
-	binary.Read(file, binary.LittleEndian, &p.ZRange)
-	binary.Read(file, binary.LittleEndian, &p.ZArray)
-	binary.Read(file, binary.LittleEndian, &p.MRange)
-	binary.Read(file, binary.LittleEndian, &p.MArray)
+	p.littleRead(file, &p.Points)
+	p.littleRead(file, &p.ZRange)
+	p.littleRead(file, &p.ZArray)
+	p.littleRead(file, &p.MRange)
+	p.littleRead(file, &p.MArray)
 }
 
 func (p *MultiPointZ) write(file io.Writer) {
@@ -385,6 +416,8 @@ type PointM struct {
 	X float64
 	Y float64
 	M float64
+
+	errReader
 }
 
 // Returns the bounding box of the PointM feature
@@ -393,7 +426,9 @@ func (p PointM) BBox() Box {
 }
 
 func (p *PointM) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, p)
+	p.littleRead(file, &p.X)
+	p.littleRead(file, &p.Y)
+	p.littleRead(file, &p.M)
 }
 
 func (p *PointM) write(file io.Writer) {
@@ -409,6 +444,8 @@ type PolyLineM struct {
 	Points    []Point
 	MRange    [2]float64
 	MArray    []float64
+
+	errReader
 }
 
 // Returns the bounding box of the PolyLineM feature
@@ -417,16 +454,19 @@ func (p PolyLineM) BBox() Box {
 }
 
 func (p *PolyLineM) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumParts)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumParts)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Parts = make([]int32, p.NumParts)
 	p.Points = make([]Point, p.NumPoints)
 	p.MArray = make([]float64, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Parts)
-	binary.Read(file, binary.LittleEndian, &p.Points)
-	binary.Read(file, binary.LittleEndian, &p.MRange)
-	binary.Read(file, binary.LittleEndian, &p.MArray)
+	p.littleRead(file, &p.Parts)
+	p.littleRead(file, &p.Points)
+	p.littleRead(file, &p.MRange)
+	p.littleRead(file, &p.MArray)
 }
 
 func (p *PolyLineM) write(file io.Writer) {
@@ -449,16 +489,19 @@ func (p PolygonM) BBox() Box {
 }
 
 func (p *PolygonM) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumParts)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumParts)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Parts = make([]int32, p.NumParts)
 	p.Points = make([]Point, p.NumPoints)
 	p.MArray = make([]float64, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Parts)
-	binary.Read(file, binary.LittleEndian, &p.Points)
-	binary.Read(file, binary.LittleEndian, &p.MRange)
-	binary.Read(file, binary.LittleEndian, &p.MArray)
+	p.littleRead(file, &p.Parts)
+	p.littleRead(file, &p.Points)
+	p.littleRead(file, &p.MRange)
+	p.littleRead(file, &p.MArray)
 }
 
 func (p *PolygonM) write(file io.Writer) {
@@ -478,6 +521,8 @@ type MultiPointM struct {
 	Points    []Point
 	MRange    [2]float64
 	MArray    []float64
+
+	errReader
 }
 
 // Returns the bounding box of the MultiPointM feature
@@ -486,13 +531,16 @@ func (p MultiPointM) BBox() Box {
 }
 
 func (p *MultiPointM) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Points = make([]Point, p.NumPoints)
 	p.MArray = make([]float64, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Points)
-	binary.Read(file, binary.LittleEndian, &p.MRange)
-	binary.Read(file, binary.LittleEndian, &p.MArray)
+	p.littleRead(file, &p.Points)
+	p.littleRead(file, &p.MRange)
+	p.littleRead(file, &p.MArray)
 }
 
 func (p *MultiPointM) write(file io.Writer) {
@@ -515,6 +563,8 @@ type MultiPatch struct {
 	ZArray    []float64
 	MRange    [2]float64
 	MArray    []float64
+
+	errReader
 }
 
 // Returns the bounding box of the MultiPatch feature
@@ -523,21 +573,24 @@ func (p MultiPatch) BBox() Box {
 }
 
 func (p *MultiPatch) read(file io.Reader) {
-	binary.Read(file, binary.LittleEndian, &p.Box)
-	binary.Read(file, binary.LittleEndian, &p.NumParts)
-	binary.Read(file, binary.LittleEndian, &p.NumPoints)
+	p.littleRead(file, &p.Box)
+	p.littleRead(file, &p.NumParts)
+	p.littleRead(file, &p.NumPoints)
+	if p.err != nil {
+		return
+	}
 	p.Parts = make([]int32, p.NumParts)
 	p.PartTypes = make([]int32, p.NumParts)
 	p.Points = make([]Point, p.NumPoints)
 	p.ZArray = make([]float64, p.NumPoints)
 	p.MArray = make([]float64, p.NumPoints)
-	binary.Read(file, binary.LittleEndian, &p.Parts)
-	binary.Read(file, binary.LittleEndian, &p.PartTypes)
-	binary.Read(file, binary.LittleEndian, &p.Points)
-	binary.Read(file, binary.LittleEndian, &p.ZRange)
-	binary.Read(file, binary.LittleEndian, &p.ZArray)
-	binary.Read(file, binary.LittleEndian, &p.MRange)
-	binary.Read(file, binary.LittleEndian, &p.MArray)
+	p.littleRead(file, &p.Parts)
+	p.littleRead(file, &p.PartTypes)
+	p.littleRead(file, &p.Points)
+	p.littleRead(file, &p.ZRange)
+	p.littleRead(file, &p.ZArray)
+	p.littleRead(file, &p.MRange)
+	p.littleRead(file, &p.MArray)
 }
 
 func (p *MultiPatch) write(file io.Writer) {
